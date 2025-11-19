@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos de Sistema e Configuração
+.env
+.env.local
+
+# Arquivos de Cache e Dependências
+node_modules
+dist
+.vite

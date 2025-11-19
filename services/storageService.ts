@@ -1,26 +1,24 @@
-import { LearningModule, ModuleId } from '../types';
-import { INITIAL_MODULES } from '../constants';
+import { LearningModule, ModuleId } from "../types";
+import { INITIAL_MODULES } from "../constants";
 
 const STORAGE_KEYS = {
-  MODULES: 'fort_fruit_modules_v1',
-  USER_SESSION: 'fort_fruit_session_v1'
+  MODULES: "fort_fruit_modules_v1",
+  USER_SESSION: "fort_fruit_session_v1",
 };
 
-// Mock User Database
-const USERS = {
-  'admin': '123',
-  'rh': 'fortfruit2024',
-  'ti': 'sistema'
-};
+// URL do seu Backend (Node.js)
+const API_URL = "http://localhost:3001";
 
 export const storageService = {
-  // --- DATA / CONTENT METHODS ---
+  // --- DATA / CONTENT METHODS (Mantemos igual por enquanto) ---
 
-  // Initialize DB with default data if empty
   init: () => {
     const existing = localStorage.getItem(STORAGE_KEYS.MODULES);
     if (!existing) {
-      localStorage.setItem(STORAGE_KEYS.MODULES, JSON.stringify(INITIAL_MODULES));
+      localStorage.setItem(
+        STORAGE_KEYS.MODULES,
+        JSON.stringify(INITIAL_MODULES)
+      );
     }
   },
 
@@ -33,19 +31,26 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.MODULES, JSON.stringify(modules));
   },
 
-  addContentToModule: (moduleId: ModuleId, type: 'video' | 'document', content: any) => {
+  addContentToModule: (
+    moduleId: ModuleId,
+    type: "video" | "document",
+    content: any
+  ) => {
     const modules = storageService.getModules();
-    const updatedModules = modules.map(mod => {
+    const updatedModules = modules.map((mod) => {
       if (mod.id === moduleId) {
-        if (type === 'video') {
+        if (type === "video") {
           return {
             ...mod,
-            videos: [...mod.videos, { id: Date.now().toString(), ...content }]
+            videos: [...mod.videos, { id: Date.now().toString(), ...content }],
           };
         } else {
           return {
             ...mod,
-            documents: [...mod.documents, { id: Date.now().toString(), ...content }]
+            documents: [
+              ...mod.documents,
+              { id: Date.now().toString(), ...content },
+            ],
           };
         }
       }
@@ -55,20 +60,44 @@ export const storageService = {
     return updatedModules;
   },
 
-  // --- AUTH METHODS ---
+  // --- AUTH METHODS (AQUI ESTÁ A MÁGICA ✨) ---
 
   login: async (username: string, pass: string): Promise<boolean> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Check "Database"
-    const validPassword = USERS[username as keyof typeof USERS];
-    if (validPassword && validPassword === pass) {
-      const sessionData = { user: username, token: 'mock-jwt-token-' + Date.now() };
-      localStorage.setItem(STORAGE_KEYS.USER_SESSION, JSON.stringify(sessionData));
-      return true;
+    try {
+      // Chama o servidor backend real
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password: pass }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Login aprovado pelo MySQL!
+        // Salvamos a sessão no navegador para ele não deslogar no F5
+        const sessionData = {
+          user: data.user,
+          role: data.role,
+          token: "token-fake-por-enquanto",
+        };
+        localStorage.setItem(
+          STORAGE_KEYS.USER_SESSION,
+          JSON.stringify(sessionData)
+        );
+        return true;
+      } else {
+        // Login recusado (senha errada ou usuário não existe)
+        console.warn("Login falhou:", data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error("Erro de conexão com o servidor:", error);
+      // Se o servidor estiver desligado, vai cair aqui
+      return false;
     }
-    return false;
   },
 
   logout: () => {
@@ -82,5 +111,5 @@ export const storageService = {
   getUser: () => {
     const session = localStorage.getItem(STORAGE_KEYS.USER_SESSION);
     return session ? JSON.parse(session).user : null;
-  }
+  },
 };
