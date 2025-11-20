@@ -7,11 +7,15 @@ import AdminPanel from "./components/AdminPanel";
 import Login from "./components/Login";
 
 import { LearningModule, ModuleId } from "./types";
-// Corrigido para importação direta do arquivo .ts (ou .tsx/jsx)
 import { storageService } from "./services/storageService";
-import { Apple, Settings, LogOut } from "lucide-react";
+import { BookText, Settings, LogOut } from "lucide-react";
+import WelcomeVideoModal from "./components/WelcomeVideoModal";
 
 type ViewState = "dashboard" | "player" | "admin";
+
+// Constante do ID do vídeo de boas-vindas
+const WELCOME_VIDEO_ID = "1k9mSVak35XTNuizRmr6yBiqzYpkquwng";
+const WELCOME_VIDEO_EMBED_URL = `https://drive.google.com/file/d/${WELCOME_VIDEO_ID}/preview`;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,37 +24,28 @@ function App() {
   const [currentModuleId, setCurrentModuleId] = useState<ModuleId | null>(null);
   const [view, setView] = useState<ViewState>("dashboard");
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const isAdmin = userRole === "admin";
+  const [showWelcomeVideo, setShowWelcomeVideo] = useState(true);
 
-  // Carregamento Inicial (Obrigatório: Uso do 'await')
-  useEffect(() => {
-    const loadData = async () => {
-      // O init não faz mais nada, mas mantemos a chamada
-      storageService.init();
+  // NOVO: Função para atualizar o estado de módulos após operações de CRUD
+  const handleModulesUpdated = (updatedModules: LearningModule[]) => {
+    setModules(updatedModules);
+  };
 
-      // 1. Checa a Sessão
-      const hasSession = storageService.checkSession();
-      if (hasSession) {
-        setIsAuthenticated(true);
-        setCurrentUser(storageService.getUser());
-      }
-
-      // 2. Carrega Conteúdo (AGORA É ASYNC!)
-      // PRECISA DO 'await' para esperar a resposta do MySQL via Node.js
-      const savedModules = await storageService.getModules();
-      setModules(savedModules);
-      setIsLoading(false);
-    };
-
-    loadData();
-  }, [isAuthenticated]); // Recarrega os módulos após o login/logout
+  // =========================================================================
+  // FUNÇÕES AUXILIARES MOVIDAS PARA DENTRO DO COMPONENTE
+  // =========================================================================
 
   const handleLogin = async (user: string, pass: string) => {
-    // Chama o login (que agora bate no Node.js/MySQL)
     const success = await storageService.login(user, pass);
     if (success) {
+      const role = storageService.getUserRole();
       setIsAuthenticated(true);
       setCurrentUser(user);
-      // Não precisa carregar módulos aqui, o useEffect faz isso ao ver o isAuthenticated mudar
+      setUserRole(role);
+
+      setShowWelcomeVideo(true);
     } else {
       throw new Error("Invalid credentials");
     }
@@ -60,6 +55,7 @@ function App() {
     storageService.logout();
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setUserRole(null);
     setView("dashboard");
     setCurrentModuleId(null);
   };
@@ -70,35 +66,66 @@ function App() {
   };
 
   const handleBackToDashboard = () => {
+    if (view === "admin") {
+      setView("dashboard");
+    }
     setCurrentModuleId(null);
-    setView("dashboard");
   };
 
-  // Salvar Conteúdo (AGORA É ASYNC!)
   const handleAddContent = async (
     moduleId: ModuleId,
     type: "video" | "document",
     data: any
   ) => {
+    if (!isAdmin) {
+      alert("Acesso negado. Apenas administradores podem adicionar conteúdo.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // PRECISA DO 'await'
       const updatedModules = await storageService.addContentToModule(
         moduleId,
         type,
         data
       );
-      // Se deu certo, atualiza o estado com a lista nova que veio do servidor
       setModules(updatedModules);
     } catch (error) {
       console.error("Erro ao adicionar conteúdo:", error);
-      // Como não podemos usar alert(), vamos apenas logar o erro.
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleCloseWelcomeVideo = () => {
+    setShowWelcomeVideo(false);
+  };
+
   const getCurrentModule = () => modules.find((m) => m.id === currentModuleId);
+
+  // =========================================================================
+
+  // Carregamento Inicial (UseEffect)
+  useEffect(() => {
+    const loadData = async () => {
+      storageService.init();
+
+      const hasSession = storageService.checkSession();
+      if (hasSession) {
+        const user = storageService.getUser();
+        const role = storageService.getUserRole();
+
+        setIsAuthenticated(true);
+        setCurrentUser(user);
+        setUserRole(role);
+      }
+
+      const savedModules = await storageService.getModules();
+      setModules(savedModules);
+      setIsLoading(false);
+    };
+    loadData();
+  }, []);
 
   if (isLoading) {
     return (
@@ -110,6 +137,10 @@ function App() {
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  if (view === "admin" && !isAdmin) {
+    setView("dashboard");
   }
 
   return (
@@ -129,7 +160,7 @@ function App() {
                 onClick={handleBackToDashboard}
               >
                 <div className="bg-fort-500 p-2 rounded-lg text-white shadow-lg shadow-fort-200">
-                  <Apple size={24} />
+                  <BookText size={24} />
                 </div>
                 <span className="font-bold text-xl tracking-tight text-gray-800">
                   Fort Fruit{" "}
@@ -137,7 +168,7 @@ function App() {
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                {view !== "admin" && (
+                {isAdmin && view !== "admin" && (
                   <button
                     onClick={() => setView("admin")}
                     className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-fort-600 bg-gray-100 hover:bg-fort-50 px-3 py-2 rounded-full transition-colors"
@@ -147,15 +178,15 @@ function App() {
                 )}
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-gray-800 uppercase">
-                    {currentUser || "Admin"}
+                    {currentUser || "Usuário"}
                   </p>
                   <p className="text-xs text-fort-600 flex items-center justify-end gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>{" "}
-                    Online
+                    {userRole || "Padrão"}
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fort-400 to-fort-600 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white uppercase">
-                  {(currentUser || "AD").substring(0, 2)}
+                  {(currentUser || "US").substring(0, 2)}
                 </div>
                 <button
                   onClick={handleLogout}
@@ -173,6 +204,7 @@ function App() {
               <AdminPanel
                 modules={modules}
                 onAddContent={handleAddContent}
+                onModulesUpdated={handleModulesUpdated}
                 onClose={() => setView("dashboard")}
               />
             ) : (
@@ -191,6 +223,15 @@ function App() {
             <p className="mt-1">Desenvolvido para treinamento interno.</p>
           </footer>
         </div>
+      )}
+
+      {/* Componente do Modal de Boas-Vindas */}
+      {isAuthenticated && (
+        <WelcomeVideoModal
+          isOpen={showWelcomeVideo}
+          onClose={handleCloseWelcomeVideo}
+          embedUrl={WELCOME_VIDEO_EMBED_URL}
+        />
       )}
     </div>
   );

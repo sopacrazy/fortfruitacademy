@@ -1,13 +1,13 @@
 export enum ModuleId {
-  RH = 'RH',
-  DP = 'DP',
-  COMPRAS = 'COMPRAS',
-  FATURAMENTO = 'FATURAMENTO',
-  CONTABILIDADE = 'CONTABILIDADE',
-  TI = 'TI',
-  FINANCEIRO = 'FINANCEIRO',
-  LOGISTICA = 'LOGISTICA',
-  ESTOQUE = 'ESTOQUE'
+  RH = "RH",
+  DP = "DP",
+  COMPRAS = "COMPRAS",
+  FATURAMENTO = "FATURAMENTO",
+  CONTABILIDADE = "CONTABILIDADE",
+  TI = "TI",
+  FINANCEIRO = "FINANCEIRO",
+  LOGISTICA = "LOGISTICA",
+  ESTOQUE = "ESTOQUE",
 }
 
 export interface Video {
@@ -15,14 +15,15 @@ export interface Video {
   title: string;
   description: string;
   duration: string;
+  category: string; // NOVO CAMPO: Categoria
   thumbnailUrl: string;
-  videoUrl?: string; // In a real app, this would be the source
+  videoUrl?: string;
 }
 
 export interface DocumentResource {
   id: string;
   title: string;
-  type: 'PDF' | 'DOC' | 'XLS' | 'LINK';
+  type: "PDF" | "DOC" | "XLS" | "LINK";
   url: string;
 }
 
@@ -38,7 +39,7 @@ export interface LearningModule {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'model';
+  role: "user" | "model";
   text: string;
   timestamp: number;
 }
