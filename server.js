@@ -191,7 +191,7 @@ app.delete("/content/:type/:id", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = (process.env.PORT = 3005);
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

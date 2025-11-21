@@ -1,5 +1,3 @@
-// /services/storageService.ts
-
 import { LearningModule, ModuleId } from "../types";
 // Removida a importação de INITIAL_MODULES, pois os dados virão do MySQL
 
@@ -8,8 +6,22 @@ const STORAGE_KEYS = {
   USER_SESSION: "fort_fruit_session_v1",
 };
 
-// URL do seu Backend (Node.js)
-const API_URL = "http://localhost:3001";
+// --------------------------------------------------------------------------
+// CORREÇÃO FINAL: Define API_URL de uma vez com o fallback local.
+// A constante é definida como a variável de ambiente OU o localhost,
+// eliminando o erro 'Assignment to constant variable'.
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3005";
+// --------------------------------------------------------------------------
+
+// Adiciona um aviso mais limpo para fins de desenvolvimento
+if (
+  API_URL === "http://localhost:3005" &&
+  process.env.NODE_ENV !== "production"
+) {
+  console.warn(
+    "ALERTA DE DESENVOLVIMENTO: REACT_APP_API_URL não encontrada. Usando URL de fallback: http://localhost:3005"
+  );
+}
 
 export const storageService = {
   // --- DATA / CONTENT METHODS ---
@@ -22,6 +34,7 @@ export const storageService = {
   // 1. OBTEM MÓDULOS (CHAMANDO O BACKEND)
   getModules: async (): Promise<LearningModule[]> => {
     try {
+      // Usa a API_URL dinâmica
       const response = await fetch(`${API_URL}/modules`);
       if (!response.ok) {
         // Lança erro se a resposta não for 200-299
@@ -44,6 +57,7 @@ export const storageService = {
     content: any
   ): Promise<LearningModule[]> => {
     try {
+      // Usa a API_URL dinâmica
       const response = await fetch(`${API_URL}/content`, {
         method: "POST",
         headers: {
@@ -71,6 +85,7 @@ export const storageService = {
     id: string
   ): Promise<LearningModule[]> => {
     try {
+      // Usa a API_URL dinâmica
       const response = await fetch(`${API_URL}/content/${type}/${id}`, {
         method: "DELETE",
       });
@@ -95,8 +110,8 @@ export const storageService = {
   // --- AUTH METHODS (Mantidos) ---
 
   login: async (username: string, pass: string): Promise<boolean> => {
-    // ... (Mantido, já usa fetch para /login)
     try {
+      // Usa a API_URL dinâmica
       const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: {
@@ -136,6 +151,7 @@ export const storageService = {
     role: string
   ): Promise<boolean> => {
     try {
+      // Usa a API_URL dinâmica
       const response = await fetch(`${API_URL}/users`, {
         method: "POST",
         headers: {
